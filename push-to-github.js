@@ -69,18 +69,19 @@ async function getAllFiles(dir, baseDir = dir) {
   return files;
 }
 
-async function pushToGitHub() {
+async function createPullRequest() {
   const octokit = await getUncachableGitHubClient();
   const owner = 'tildenatmidnorth';
   const repo = 'codedeploytest';
-  const branch = 'main';
+  const baseBranch = 'main';
+  const newBranch = 'update-black-theme-' + Date.now();
   
-  console.log('Getting current commit...');
+  console.log('Getting current commit from main...');
   
   const { data: refData } = await octokit.git.getRef({
     owner,
     repo,
-    ref: `heads/${branch}`
+    ref: `heads/${baseBranch}`
   });
   const currentCommitSha = refData.object.sha;
   
@@ -90,6 +91,15 @@ async function pushToGitHub() {
     commit_sha: currentCommitSha
   });
   const treeSha = commitData.tree.sha;
+  
+  console.log(`Creating new branch: ${newBranch}...`);
+  
+  await octokit.git.createRef({
+    owner,
+    repo,
+    ref: `refs/heads/${newBranch}`,
+    sha: currentCommitSha
+  });
   
   console.log('Building file tree...');
   
@@ -126,22 +136,32 @@ async function pushToGitHub() {
   const { data: newCommit } = await octokit.git.createCommit({
     owner,
     repo,
-    message: 'Update: Change background to dark/black gradient',
+    message: 'Update: Change font and button colors to black',
     tree: newTree.sha,
     parents: [currentCommitSha]
   });
   
-  console.log('Pushing to GitHub...');
+  console.log('Pushing to new branch...');
   await octokit.git.updateRef({
     owner,
     repo,
-    ref: `heads/${branch}`,
+    ref: `heads/${newBranch}`,
     sha: newCommit.sha
   });
   
-  console.log(`Successfully pushed to GitHub!`);
-  console.log(`Commit: ${newCommit.sha}`);
-  console.log(`URL: https://github.com/${owner}/${repo}`);
+  console.log('Creating pull request...');
+  const { data: prData } = await octokit.pulls.create({
+    owner,
+    repo,
+    title: 'Update: Change font and button colors to black',
+    head: newBranch,
+    base: baseBranch,
+    body: 'This pull request updates the styling:\n\n- Changed H1 heading color from purple to black\n- Changed button background from purple to black\n- Updated message box border to black\n\nThese changes create a sleek black-and-white theme that complements the dark space background.'
+  });
+  
+  console.log(`\nPull request created successfully!`);
+  console.log(`PR #${prData.number}: ${prData.title}`);
+  console.log(`URL: ${prData.html_url}`);
 }
 
-pushToGitHub().catch(console.error);
+createPullRequest().catch(console.error);
