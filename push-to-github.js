@@ -55,7 +55,7 @@ async function getAllFiles(dir, baseDir = dir) {
     const fullPath = path.join(dir, entry.name);
     const relativePath = path.relative(baseDir, fullPath);
     
-    if (entry.name === '.git' || entry.name === 'node_modules' || entry.name === '.cache') {
+    if (entry.name === '.git' || entry.name === 'node_modules' || entry.name === '.cache' || entry.name === '.local') {
       continue;
     }
     
@@ -126,7 +126,7 @@ async function pushToGitHub() {
   const { data: newCommit } = await octokit.git.createCommit({
     owner,
     repo,
-    message: 'Update: Impact font for H1, add Earth background image with opacity 0.3',
+    message: 'Update: Change background to dark/black gradient',
     tree: newTree.sha,
     parents: [currentCommitSha]
   });
